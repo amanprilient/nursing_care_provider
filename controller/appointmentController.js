@@ -9,13 +9,24 @@ const { findAppointment } = require('../service/appointmentservice');
 
 exports.BookAppointment = async (req, res)=> {
     try {
-        const {service_provider, service, price, appointment_date, timeSlot, status, payment_status, notes, reject_reason, location, _id} = req.body;
+        const {service_provider, service, price, appointment_date, timeSlot, status, payment_status, notes, reject_reason, location, _id, reschedule_date, reschedule_timeSlot} = req.body;
         const customer_id = res.locals.user._id;
 
         let detailsTosave = {
-            customer:customer_id, service_provider, service, price, appointment_date, timeSlot, status, payment_status, notes, reject_reason, location
+            customer:customer_id, service_provider, service, price, appointment_date, timeSlot, status, payment_status, notes, reject_reason, location, reschedule_date, reschedule_timeSlot
         }
         if(_id){
+            if (detailsTosave.status === "rescheduled") {
+                if (!detailsTosave.reschedule_date || new Date(detailsTosave.reschedule_date) < new Date()) {
+                    throw new Error("Appointment date is required and cannot be in the past.");
+                }
+                if (!detailsTosave.reschedule_timeSlot || !detailsTosave.reschedule_timeSlot.start || new Date(detailsTosave.reschedule_timeSlot.start) < new Date()) {
+                    throw new Error("Start time is required and cannot be in the past.");
+                }
+                if (!detailsTosave.reschedule_timeSlot || !detailsTosave.reschedule_timeSlot.end || new Date(detailsTosave.reschedule_timeSlot.end) < new Date()) {
+                    throw new Error("End time is required and cannot be in the past.");
+                }
+            }
             let updated = await appointmentModel.findByIdAndUpdate(_id, detailsTosave);
         }else{
             let newAppointment = new appointmentModel(detailsTosave);
@@ -24,7 +35,6 @@ exports.BookAppointment = async (req, res)=> {
         const output = {
             statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
             message: messages.DATA_SAVED,
-            _id: service._id
         };
         res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
 
@@ -38,10 +48,6 @@ exports.BookAppointment = async (req, res)=> {
 }  
 exports.GetAppointment = async (req, res)=> {
     try {
-        // let appointment = appointmentModel.find({}).populate([
-        //     {path:'customer', model:userModel}, 
-        //     {path:'service_provider', model:userModel},
-        //     {path:'service', model:serviceModel}]);
         let appointments = await findAppointment(res.locals.user._id, res.locals.user.user_type);
         if(appointments.success){
             const output = {
@@ -59,7 +65,6 @@ exports.GetAppointment = async (req, res)=> {
             res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
         }
     } catch (error) {
-        console.log(error,"---------error")
         res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
             status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
             message: messages.CATCH_BLOCK_ERROR,

@@ -9,11 +9,14 @@ const logger = require("../shared/logger");
 exports.Register = async (req, res) => {
     try {
         const body = req.body;
-        // console.log(req.body.email, "@@@", res.locals.user.user_type);
+        const user = res.locals.user
+        // console.log(req.body.email, "@@@", user.user_type);
         const { email, services, city, preferred_working_hours, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, address } = req.body;
+        
+        const existUser = await userModel.findById(user._id,{registered:1});
 
         const requiredFields = [
-            // 'agency_name', 'email', 'city', 'dob', 'gender',
+            // 'email', 'city', 'dob', 'gender',
             'services', 'preferred_working_hours', 'pricing', 'name',
             'specialties', 'qualifications', 'experience_years', 'payment_details'
         ];
@@ -23,9 +26,22 @@ exports.Register = async (req, res) => {
             if (!body[field] || body[field] === 'undefined' || body[field] === undefined || body[field] === null) {
                 errors.push(`"${field}" is required and cannot be blank.`);
             }
+            if(field == "preferred_working_hours"){
+                const { days, hours } = JSON.parse(body[field]);
+                if (days.length === 0) {
+                    errors.push('Preferred working date is required.');
+                }
+                if (!hours || typeof hours !== 'object' || !hours.start || !hours.end) {
+                    errors.push('Hours should include both start and end times.');
+                } else {
+                    if (isNaN(new Date(hours.start)) || isNaN(new Date(hours.end))) {
+                        errors.push('Start and end of preferred hours should be valid dates.');
+                    }
+                }
+            }
         }
 
-        if (errors.length > 0 && (res.locals.user.user_type == 'individual' || res.locals.user.user_type == 'agency')) {
+        if (errors.length > 0 && (user.user_type == 'individual' || user.user_type == 'agency')) {
             const output = {
                 status: messages.STATUS_CODE_FOR_BAD_REQUEST,
                 message: messages.DATA_NOT_FOUND,
@@ -34,13 +50,12 @@ exports.Register = async (req, res) => {
             return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json(output);
         }
 
-
         let documents;
-        if (req.files && req.files.documents && req.files.documents.length > 0 && (res.locals.user.user_type == 'individual' || res.locals.user.user_type == 'agency')) {
+        if ((user.user_type == 'individual' || user.user_type == 'agency') && !existUser.registered) {
             documents = util.handleDocuments(req.files);
         }
         let certifications
-        if (req.files && req.files.certifications && req.files.certifications.length > 0 && (res.locals.user.user_type == 'individual' || res.locals.user.user_type == 'agency')) {
+        if ((user.user_type == 'individual' || user.user_type == 'agency') && !existUser.registered) {
             certifications = util.handleCertificates(req.files);
         }
         let profile_photo
@@ -54,7 +69,7 @@ exports.Register = async (req, res) => {
         let fieldsForSave = {
             email, services, city, preferred_working_hours: preferred_working_hours ? JSON.parse(preferred_working_hours) : {}, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, documents, certifications, profile_photo, registered: true, address
         }
-        let updated = await userModel.findByIdAndUpdate(res.locals.user._id, fieldsForSave);
+        let updated = await userModel.findByIdAndUpdate(user._id, fieldsForSave,{new:true});
         if (updated) {
             const output = {
                 status: messages.STATUS_CODE_FOR_DATA_UPDATE,
@@ -64,11 +79,15 @@ exports.Register = async (req, res) => {
         }
 
     } catch (error) {
-        console.log(error, "-----------er");
+        let errors = [];
+        error.message.split(",").map(val=> {
+            errors.push(val);
+        })
         res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
             status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
             message: messages.CATCH_BLOCK_ERROR,
-            errorMessage: error.message
+            // errorMessage: error.message
+            errorMessage: errors
         });
     }
 }

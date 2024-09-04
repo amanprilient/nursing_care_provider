@@ -17,28 +17,46 @@ const appointmentSchema = new mongoose.Schema({
         ref:'service',
         required:[true, "Service id is required."]
     },
+    status:{
+        type:String,
+        enum:["pending", "confirmed", "completed", "rejected", "rescheduled"],
+        default:"pending"
+    },
     price:{
         type:Number,
         required:[true, "price is required."]
     },
     appointment_date:{
         type:Date,
-        required:[true, "Appointment date is required."]
+        required:[true, "Appointment date is required."],
+        validate:{
+            validator:function(v){
+                return v >= new Date();
+            },
+            message:"Appointment date is required and can not be in the past."
+        }
     },
     timeSlot:{
         start:{
             type:Date,
-            required:[true, "Start time is required."]
+            required:[true,"Start time is required."],
+            validate:{
+                validator:function(v){
+                    return v >= new Date();
+                },
+                message:"Start time is required and can not be in the past."
+            }
         },
         end:{
             type:Date,
-            required:[true, "End time is required."]
+            required:[true, "End time is required."],
+            validate:{
+                validator:function(v){
+                    return v >= new Date();
+                },
+                message:"End time is required and can not be in the past."
+            }
         }
-    },
-    status:{
-        type:String,
-        enum:["pending", "confirmed", "completed", "rejected", "rescheduled"],
-        default:"pending"
     },
     payment_status:{
         type:String,
@@ -64,8 +82,14 @@ const appointmentSchema = new mongoose.Schema({
             type:Number,
             required:[true, "Location(longitude) is required."]
         },
-    }
+    },
+    reschedule_date:{ type:Date },
+    reschedule_timeSlot:{
+        start:{ type:Date },
+        end:{ type:Date  }
+    },
 }, { timestamps:true });
+
 
 var appointmentModel = mongoose.model('appointment', appointmentSchema);
 module.exports = { appointmentModel }
