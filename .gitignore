@@ -1,0 +1,6 @@
+.env
+node_modules
+upload/
+logs/
+notificationConfig.json
+invoices/
