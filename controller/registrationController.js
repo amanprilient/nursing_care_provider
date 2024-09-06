@@ -1,4 +1,6 @@
 const express = require("express");
+const fs = require('fs');
+const path = require('path');
 const { userModel } = require("../model/user.model");
 const validation = require("../shared/validation");
 const messages = require('../shared/messages');
@@ -11,51 +13,27 @@ exports.Register = async (req, res) => {
         const body = req.body;
         const user = res.locals.user
         // console.log(req.body.email, "@@@", user.user_type);
-        const { email, services, city, preferred_working_hours, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, address } = req.body;
+        const { email, services, city, preferred_working_hours, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, address, preferred_locality} = req.body;
         
-        const existUser = await userModel.findById(user._id,{registered:1});
+        // const existUser = await userModel.findById(user._id,{registered:1});
 
-        const requiredFields = [
-            // 'email', 'city', 'dob', 'gender',
-            'services', 'preferred_working_hours', 'pricing', 'name',
-            'specialties', 'qualifications', 'experience_years', 'payment_details'
-        ];
-        let errors = [];
+        const validationResult = await validateFields(body, user.user_type);
 
-        for (let field of requiredFields) {
-            if (!body[field] || body[field] === 'undefined' || body[field] === undefined || body[field] === null) {
-                errors.push(`"${field}" is required and cannot be blank.`);
-            }
-            if(field == "preferred_working_hours"){
-                const { days, hours } = JSON.parse(body[field]);
-                if (days.length === 0) {
-                    errors.push('Preferred working date is required.');
-                }
-                if (!hours || typeof hours !== 'object' || !hours.start || !hours.end) {
-                    errors.push('Hours should include both start and end times.');
-                } else {
-                    if (isNaN(new Date(hours.start)) || isNaN(new Date(hours.end))) {
-                        errors.push('Start and end of preferred hours should be valid dates.');
-                    }
-                }
-            }
-        }
-
-        if (errors.length > 0 && (user.user_type == 'individual' || user.user_type == 'agency')) {
+        if (validationResult.length > 0 && (user.user_type == 'individual' || user.user_type == 'agency')) {
             const output = {
                 status: messages.STATUS_CODE_FOR_BAD_REQUEST,
                 message: messages.DATA_NOT_FOUND,
-                errors: errors
+                errors: validationResult
             };
             return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json(output);
         }
 
         let documents;
-        if ((user.user_type == 'individual' || user.user_type == 'agency') && !existUser.registered) {
+        if ((user.user_type == 'individual' || user.user_type == 'agency') ) {
             documents = util.handleDocuments(req.files);
         }
         let certifications
-        if ((user.user_type == 'individual' || user.user_type == 'agency') && !existUser.registered) {
+        if ((user.user_type == 'individual' || user.user_type == 'agency')) {
             certifications = util.handleCertificates(req.files);
         }
         let profile_photo
@@ -67,7 +45,7 @@ exports.Register = async (req, res) => {
             }
         }
         let fieldsForSave = {
-            email, services, city, preferred_working_hours: preferred_working_hours ? JSON.parse(preferred_working_hours) : {}, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, documents, certifications, profile_photo, registered: true, address
+            email, services, city, preferred_working_hours: preferred_working_hours ? JSON.parse(preferred_working_hours) : {}, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, documents, certifications, profile_photo, registered: true, address, preferred_locality
         }
         let updated = await userModel.findByIdAndUpdate(user._id, fieldsForSave,{new:true});
         if (updated) {
@@ -90,4 +68,144 @@ exports.Register = async (req, res) => {
             errorMessage: errors
         });
     }
+}
+exports.deleteDocuments = async (req, res) => {
+    try {
+        const { documentsToDelete, deleteAll, fileType } = req.body; // List of document paths to delete
+        const user = res.locals.user; //user
+
+        if (user.user_type == 'admin' || user.user_type == 'customer') {
+            const output = {
+                status: messages.STATUS_CODE_FOR_BAD_REQUEST,
+                message: 'This type of user has no documents',
+            };
+            return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json(output);
+        }
+
+        if (deleteAll == true) {
+            if (fileType == 'document') {
+                deleteDocs('all', user._id, user.documents, 'document');
+            } else if (fileType == 'certificate') {
+                deleteDocs('all', user._id, user.certifications, 'certificate');
+            } else {
+                const output = {
+                    status: messages.STATUS_CODE_FOR_BAD_REQUEST,
+                    message: 'No documents specified for deletion',
+                };
+                return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json(output);
+            }
+        } else {
+            if (!documentsToDelete || !Array.isArray(documentsToDelete) || documentsToDelete.length === 0) {
+                const output = {
+                    status: messages.STATUS_CODE_FOR_BAD_REQUEST,
+                    message: 'No documents specified for deletion',
+                };
+                return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json(output);
+           }
+            if (fileType == 'document') {
+                deleteDocs(documentsToDelete, user._id, user.documents, 'document');
+            } else if (fileType == 'certificate') {
+                deleteDocs(documentsToDelete, user._id, user.certifications, 'certificate');
+            } else {
+                const output = {
+                    status: messages.STATUS_CODE_FOR_BAD_REQUEST,
+                    message: 'No documents specified for deletion',
+                };
+                return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json(output);
+            }
+        }
+        const output = {
+            status: messages.STATUS_CODE_FOR_DATA_UPDATE,
+            message: 'Documents deleted successfully',
+        };
+        return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json(output);
+
+    } catch (error) {
+        res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+            status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+            message: messages.CATCH_BLOCK_ERROR,
+            errorMessage: error.message
+        });
+    }
+};
+exports.deleteProfile = async (req,res)=> {
+    try {
+        let { profile } = req.body;
+        const documentPath = path.join(__dirname, '../', profile.url);
+        await deleteFile(documentPath);
+        let user = await userModel.findOneAndUpdate({_id:res.locals.user._id},{profile_photo:{}});
+        const output = {
+            status: messages.STATUS_CODE_FOR_DATA_UPDATE,
+            message: 'Profile deleted successfully',
+        };
+        return res.status(messages.STATUS_CODE_FOR_DATA_UPDATE).json(output);
+
+    } catch (error) { 
+        res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+            status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+            message: messages.CATCH_BLOCK_ERROR,
+            errorMessage: error.message
+        });
+    }
+}
+const validateFields = async (body, user_type)=> {
+    let requiredFields = [];
+    if(user_type == 'individual' || user_type == 'agency'){
+        requiredFields = [
+            'services', 'preferred_working_hours', 'pricing', 'name',
+            'specialties', 'qualifications', 'experience_years', 'payment_details', 'preferred_locality','email'
+        ];
+        }else{
+            requiredFields = [
+                 'name',"address", 'city', 'email',
+            ];
+        }
+    let errors = [];
+
+    for (let field of requiredFields) {
+        if (!body[field] || body[field] === 'undefined' || body[field] === undefined || body[field] === null) {
+            errors.push(`"${field}" is required and cannot be blank.`);
+        }
+        if(field == "preferred_working_hours" && (user_type == 'individual' || user_type == 'agency')){
+            const { days, hours } = JSON.parse(body[field]);
+            if (days.length === 0) {
+                errors.push('Preferred working date is required.');
+            }
+            if (!hours || typeof hours !== 'object' || !hours.start || !hours.end) {
+                errors.push('Hours should include both start and end times.');
+            } else {
+                if (isNaN(new Date(hours.start)) || isNaN(new Date(hours.end))) {
+                    errors.push('Start and end of preferred hours should be valid dates.');
+                }
+            }
+        }
+    }
+    return errors
+}
+const deleteFile = (filePath) => {
+    return new Promise((resolve, reject) => {
+        fs.unlink(filePath, (err) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+};
+const deleteDocs = async (selected, id, docs, doc_type) => {
+    const validDocumentsToDelete = selected === 'all' ? docs : docs.filter(doc => selected.includes(doc));
+
+
+    if (validDocumentsToDelete.length === 0) {
+        throw new Error('No matching documents found for deletion');
+    }
+    await Promise.all(validDocumentsToDelete.map(async (document) => {
+        const documentPath = path.join(__dirname, '../', document.url);
+        await deleteFile(documentPath);
+    }));
+    let user = await userModel.findById(id);
+    if (doc_type == 'document') {
+        user.documents = user.documents.filter(doc => !validDocumentsToDelete.includes(doc));
+    } else if (doc_type == 'certificate') {
+        user.certifications = user.certifications.filter(doc => !validDocumentsToDelete.includes(doc));
+    }
+    await userModel.save();
 }

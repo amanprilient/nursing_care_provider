@@ -17,6 +17,8 @@ router.delete('/service/delete',checkAuth, servicesController.DeleteService );
 
 // register
 router.put('/register', checkAuth, uploadImage, registrationController.Register );
+router.post('/delete-docs', checkAuth, registrationController.deleteDocuments );
+router.post('/delete-profile', checkAuth, registrationController.deleteProfile );
 
 //appointment
 router.post("/appointment/book", checkAuth, appointmentController.BookAppointment);

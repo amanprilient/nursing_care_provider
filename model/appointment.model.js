@@ -19,7 +19,7 @@ const appointmentSchema = new mongoose.Schema({
     },
     status:{
         type:String,
-        enum:["pending", "confirmed", "completed", "rejected", "rescheduled"],
+        enum:["pending", "confirmed", "completed", "rejected", "rescheduled","cancel"],
         default:"pending"
     },
     price:{
@@ -88,6 +88,23 @@ const appointmentSchema = new mongoose.Schema({
         start:{ type:Date },
         end:{ type:Date  }
     },
+    appointment_expiry_time:{
+        value:{type:Number, default:12},
+        unit:{type:String, default:"Hrs"}
+    },
+    feedback:{
+        rating:{
+            type:Number,
+            min:1,
+            max:5
+        },
+        Comment:{
+            type:String
+        },
+        date:{
+            type:Date
+        }
+    }
 }, { timestamps:true });
 
 
