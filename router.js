@@ -8,7 +8,7 @@ const { uploadImage } = require('./middleware/upload');
 const appointmentController = require("./controller/appointmentController")
 
 
-router.post('/auth/send-otp',authController.sendOtp );
+router.post('/auth/send-otp',authController.SendOtp );
 router.post('/auth/login',authController.Login );
 
 // services
@@ -17,12 +17,14 @@ router.delete('/service/delete',checkAuth, servicesController.DeleteService );
 
 // register
 router.put('/register', checkAuth, uploadImage, registrationController.Register );
-router.post('/delete-docs', checkAuth, registrationController.deleteDocuments );
-router.post('/delete-profile', checkAuth, registrationController.deleteProfile );
+router.post('/delete-docs', checkAuth, registrationController.DeleteDocuments );
+router.put('/delete-profile', checkAuth, registrationController.DeleteProfile );
+router.put('/update-profile', checkAuth, uploadImage, registrationController.updateProfile );
 
 //appointment
 router.post("/appointment/book", checkAuth, appointmentController.BookAppointment);
 router.get("/appointment/get", checkAuth, appointmentController.GetAppointment);
-// router.post("/get-appointment-details", checkAuth, appointmentController.BookAppointment);
+router.put("/appointment/update", checkAuth, appointmentController.UpdateAppointment);
+router.get("/appointment/get-appointment-details", checkAuth, appointmentController.AppointmentDetails);
 
 module.exports = router

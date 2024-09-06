@@ -57,7 +57,15 @@ const userSchema = new mongoose.Schema({
         }
     },
     address: {
-        type: String
+        address:{
+            type:String,
+        },
+        latitude:{
+            type:Number,
+        },
+        longitude:{
+            type:Number,
+        },
     },
     specialties: [String],
     qualifications: [String],
@@ -80,6 +88,7 @@ const userSchema = new mongoose.Schema({
     fcm_token: {
         type: String
     },
+    ratings:[Number],
     is_enable: {
         type: Boolean,
         default: true

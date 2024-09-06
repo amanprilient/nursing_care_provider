@@ -8,23 +8,33 @@ const { serviceModel } = require("../model/service.model");
 
 exports.AddService = async (req, res) => {
     try {
-        const name = req.body.name
-        const description = req.body.description
-        const _id = req.body._id
-        if (!name || name == undefined || name == '') {
-            const output = {
-                status: messages.STATUS_CODE_FOR_INVALID_INPUT,
-                message: "Name is mendatory"
-            };
-            return res.status(messages.STATUS_CODE_FOR_INVALID_INPUT).json(output);
-        }
+        const {name, description, service_image, _id} = req.body
+        // if (!name || name == undefined || name == '' || !description || description == undefined || description == '' || !service_image || ervic  ) {
+        //     const output = {
+        //         status: messages.STATUS_CODE_FOR_INVALID_INPUT,
+        //         message: "Name is mendatory"
+        //     };
+        //     return res.status(messages.STATUS_CODE_FOR_INVALID_INPUT).json(output);
+        // }
         let service;
         if (_id) {
-            service = await serviceModel.findOneAndUpdate(
-                { _id, name },
-                { name, description },
-                { new: true, upsert: true }
-            );
+            let existedService = await serviceModel.findById(_id);
+             if(!existedService){
+                const output = {
+                    statusCode: messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+                    message: messages.DATA_NOT_FOUND,
+                    data:{}
+                };
+                res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
+             }else{
+                const documentPath = path.join(__dirname, '../', existedService.service_image.url);
+                await util.deleteFile(documentPath);
+                 service = await serviceModel.findOneAndUpdate(
+                     { _id },
+                     { name, description, service_image },
+                     { new: true, upsert: true }
+                    );
+                }
         } else {
             const newService = new serviceModel({ name, description });
             service = await newService.save();
@@ -36,9 +46,16 @@ exports.AddService = async (req, res) => {
         };
         res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
 
-    } catch (error) {
-        logger.error(error)
-        res.status(500).json({ message: error.message, code: error.code });
+    } catch (error) { 
+        let errors = []
+        error.split(",").map(val=> {
+            errors.push(val)
+        })
+        res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+        status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+        message: messages.CATCH_BLOCK_ERROR,
+        errorMessage: errors
+    });
     }
 }
 exports.DeleteService = async (req, res) => {
@@ -58,8 +75,15 @@ exports.DeleteService = async (req, res) => {
             };
             res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
         }
-    } catch (error) {
-        logger.error(error)
-        res.status(500).json({ message: error.message, code: error.code });
+    } catch (error) { 
+        let errors = []
+        error.split(",").map(val=> {
+            errors.push(val)
+        })
+        res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+        status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+        message: messages.CATCH_BLOCK_ERROR,
+        errorMessage: errors
+    });
     }
 }

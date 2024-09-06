@@ -6,7 +6,7 @@ const { createOtpForMobileNo } = require("../shared/util");
 const util = require("../shared/util");
 const logger = require("../shared/logger");
 
-exports.sendOtp = async (req, res)=> {
+exports.SendOtp = async (req, res)=> {
     try {
         const  mobile_number  = req.body.mobile_number
         const  user_type  = req.body.user_type

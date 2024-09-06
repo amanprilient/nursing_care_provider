@@ -7,14 +7,15 @@ const messages = require('../shared/messages');
 const { createOtpForMobileNo } = require("../shared/util");
 const util = require("../shared/util");
 const logger = require("../shared/logger");
+const { url } = require("inspector");
 
 exports.Register = async (req, res) => {
     try {
         const body = req.body;
         const user = res.locals.user
         // console.log(req.body.email, "@@@", user.user_type);
-        const { email, services, city, preferred_working_hours, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, address, preferred_locality} = req.body;
-        
+        const { email, services, city, preferred_working_hours, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, address, preferred_locality } = req.body;
+
         // const existUser = await userModel.findById(user._id,{registered:1});
 
         const validationResult = await validateFields(body, user.user_type);
@@ -29,7 +30,7 @@ exports.Register = async (req, res) => {
         }
 
         let documents;
-        if ((user.user_type == 'individual' || user.user_type == 'agency') ) {
+        if ((user.user_type == 'individual' || user.user_type == 'agency')) {
             documents = util.handleDocuments(req.files);
         }
         let certifications
@@ -47,7 +48,7 @@ exports.Register = async (req, res) => {
         let fieldsForSave = {
             email, services, city, preferred_working_hours: preferred_working_hours ? JSON.parse(preferred_working_hours) : {}, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, documents, certifications, profile_photo, registered: true, address, preferred_locality
         }
-        let updated = await userModel.findByIdAndUpdate(user._id, fieldsForSave,{new:true});
+        let updated = await userModel.findByIdAndUpdate(user._id, fieldsForSave, { new: true });
         if (updated) {
             const output = {
                 status: messages.STATUS_CODE_FOR_DATA_UPDATE,
@@ -58,7 +59,7 @@ exports.Register = async (req, res) => {
 
     } catch (error) {
         let errors = [];
-        error.message.split(",").map(val=> {
+        error.message.split(",").map(val => {
             errors.push(val);
         })
         res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
@@ -69,7 +70,7 @@ exports.Register = async (req, res) => {
         });
     }
 }
-exports.deleteDocuments = async (req, res) => {
+exports.DeleteDocuments = async (req, res) => {
     try {
         const { documentsToDelete, deleteAll, fileType } = req.body; // List of document paths to delete
         const user = res.locals.user; //user
@@ -84,9 +85,9 @@ exports.deleteDocuments = async (req, res) => {
 
         if (deleteAll == true) {
             if (fileType == 'document') {
-                deleteDocs('all', user._id, user.documents, 'document');
+                await deleteDocs('all', user._id, user.documents, 'document');
             } else if (fileType == 'certificate') {
-                deleteDocs('all', user._id, user.certifications, 'certificate');
+                await deleteDocs('all', user._id, user.certifications, 'certificate');
             } else {
                 const output = {
                     status: messages.STATUS_CODE_FOR_BAD_REQUEST,
@@ -101,11 +102,11 @@ exports.deleteDocuments = async (req, res) => {
                     message: 'No documents specified for deletion',
                 };
                 return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json(output);
-           }
-            if (fileType == 'document') {
-                deleteDocs(documentsToDelete, user._id, user.documents, 'document');
-            } else if (fileType == 'certificate') {
-                deleteDocs(documentsToDelete, user._id, user.certifications, 'certificate');
+            }
+            if (fileType == 'document' && documentsToDelete.some(doc=> doc.url.includes("documents"))) {
+                await deleteDocs(documentsToDelete, user._id, user.documents, 'document');
+            } else if (fileType == 'certificate'  && documentsToDelete.some(doc=> doc.url.includes("certifications"))) {
+                await deleteDocs(documentsToDelete, user._id, user.certifications, 'certificate');
             } else {
                 const output = {
                     status: messages.STATUS_CODE_FOR_BAD_REQUEST,
@@ -128,45 +129,86 @@ exports.deleteDocuments = async (req, res) => {
         });
     }
 };
-exports.deleteProfile = async (req,res)=> {
+exports.DeleteProfile = async (req, res) => {
     try {
-        let { profile } = req.body;
-        const documentPath = path.join(__dirname, '../', profile.url);
-        await deleteFile(documentPath);
-        let user = await userModel.findOneAndUpdate({_id:res.locals.user._id},{profile_photo:{}});
-        const output = {
-            status: messages.STATUS_CODE_FOR_DATA_UPDATE,
-            message: 'Profile deleted successfully',
-        };
-        return res.status(messages.STATUS_CODE_FOR_DATA_UPDATE).json(output);
-
-    } catch (error) { 
+        if (res?.locals?.user?.profile_photo?.url) {
+            const documentPath = path.join(__dirname, '../', res.locals.user.profile_photo.url);
+            await util.deleteFile(documentPath);
+            let user = await userModel.findOneAndUpdate({ _id: res.locals.user._id }, { profile_photo: {} });
+            const output = {
+                status: messages.STATUS_CODE_FOR_DATA_UPDATE,
+                message: 'Profile deleted successfully',
+            };
+            return res.status(messages.STATUS_CODE_FOR_DATA_UPDATE).json(output);
+        } else {
+            const output = {
+                status: messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+                message: 'Profile not found!',
+            };
+            return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
+        }
+    } catch (error) {
         res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
             status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
             message: messages.CATCH_BLOCK_ERROR,
             errorMessage: error.message
         });
     }
-}
-const validateFields = async (body, user_type)=> {
+};
+exports.updateProfile = async (req, res) => {
+    try {
+        let profile_photo
+        if (req.files && req.files.profile_photo) {
+            const fileType = req.files['profile_photo'][0].mimetype.split('/')[0];
+            profile_photo = {
+                url: req.files['profile_photo'][0].path,
+                type: fileType
+            }
+            if (res?.locals?.user?.profile_photo?.url) {
+                const documentPath = path.join(__dirname, '../', res.locals.user.profile_photo.url);
+                await util.deleteFile(documentPath);
+            }
+            let updateProfile = await userModel.findByIdAndUpdate(res.locals.user._id, { profile_photo: profile_photo });
+            const output = {
+                status: messages.STATUS_CODE_FOR_DATA_UPDATE,
+                message: 'Profile updated successfully',
+            };
+            return res.status(messages.STATUS_CODE_FOR_DATA_UPDATE).json(output);
+        } else {
+            const output = {
+                status: messages.STATUS_CODE_FOR_BAD_REQUEST,
+                message: 'Profile photo is required!',
+            };
+            return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json(output);
+        }
+    } catch (error) {
+        res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+            status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+            message: messages.CATCH_BLOCK_ERROR,
+            errorMessage: error.message
+        });
+    }
+};
+
+const validateFields = async (body, user_type) => {
     let requiredFields = [];
-    if(user_type == 'individual' || user_type == 'agency'){
+    if (user_type == 'individual' || user_type == 'agency') {
         requiredFields = [
             'services', 'preferred_working_hours', 'pricing', 'name',
-            'specialties', 'qualifications', 'experience_years', 'payment_details', 'preferred_locality','email'
+            'specialties', 'qualifications', 'experience_years', 'payment_details', 'preferred_locality', 'email'
         ];
-        }else{
-            requiredFields = [
-                 'name',"address", 'city', 'email',
-            ];
-        }
+    } else {
+        requiredFields = [
+            'name', "address", 'city', 'email',
+        ];
+    }
     let errors = [];
 
     for (let field of requiredFields) {
         if (!body[field] || body[field] === 'undefined' || body[field] === undefined || body[field] === null) {
             errors.push(`"${field}" is required and cannot be blank.`);
         }
-        if(field == "preferred_working_hours" && (user_type == 'individual' || user_type == 'agency')){
+        if (field == "preferred_working_hours" && (user_type == 'individual' || user_type == 'agency')) {
             const { days, hours } = JSON.parse(body[field]);
             if (days.length === 0) {
                 errors.push('Preferred working date is required.');
@@ -181,7 +223,7 @@ const validateFields = async (body, user_type)=> {
         }
     }
     return errors
-}
+};
 const deleteFile = (filePath) => {
     return new Promise((resolve, reject) => {
         fs.unlink(filePath, (err) => {
@@ -191,21 +233,20 @@ const deleteFile = (filePath) => {
     });
 };
 const deleteDocs = async (selected, id, docs, doc_type) => {
-    const validDocumentsToDelete = selected === 'all' ? docs : docs.filter(doc => selected.includes(doc));
-
+    const validDocumentsToDelete = selected === 'all' ? docs : docs.filter(doc => selected.some(deleteDoc=> deleteDoc.url == doc.url));
 
     if (validDocumentsToDelete.length === 0) {
-        throw new Error('No matching documents found for deletion');
+        return new Error('No matching documents found for deletion');
     }
     await Promise.all(validDocumentsToDelete.map(async (document) => {
         const documentPath = path.join(__dirname, '../', document.url);
-        await deleteFile(documentPath);
+        await util.deleteFile(documentPath);
     }));
     let user = await userModel.findById(id);
     if (doc_type == 'document') {
-        user.documents = user.documents.filter(doc => !validDocumentsToDelete.includes(doc));
+        user.documents = user.documents.filter(doc => !validDocumentsToDelete.some(deletedDoc=> deletedDoc.url == doc.url));
     } else if (doc_type == 'certificate') {
-        user.certifications = user.certifications.filter(doc => !validDocumentsToDelete.includes(doc));
+        user.certifications = user.certifications.filter(doc => !validDocumentsToDelete.some(deleteDocs => deleteDocs.url == doc.url));
     }
-    await userModel.save();
-}
+    await user.save();
+};

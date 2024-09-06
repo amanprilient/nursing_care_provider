@@ -15,23 +15,62 @@ exports.BookAppointment = async (req, res)=> {
         let detailsTosave = {
             customer:customer_id, service_provider, service, price, appointment_date, timeSlot, status, payment_status, notes, reject_reason, location, reschedule_date, reschedule_timeSlot
         }
-        if(_id){
+            let newAppointment = new appointmentModel(detailsTosave);
+            let saved = await newAppointment.save();
+        const output = {
+            statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
+            message: messages.DATA_SAVED,
+        };
+        res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
+
+    } catch (error) {
+        res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+            status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+            message: messages.CATCH_BLOCK_ERROR,
+            errorMessage: error.message
+        });   
+    }
+}  
+exports.UpdateAppointment = async (req, res)=> {
+    try {
+        const {status, notes, reject_reason, reschedule_date, reschedule_timeSlot} = req.body;
+        const _id = req.query._id
+        let detailsTosave = {
+            status:status?.toLowerCase(), notes, reject_reason, reschedule_date, reschedule_timeSlot
+        }
             if (detailsTosave.status === "rescheduled") {
                 if (!detailsTosave.reschedule_date || new Date(detailsTosave.reschedule_date) < new Date()) {
-                    throw new Error("Appointment date is required and cannot be in the past.");
+                    const output = {
+                        statusCode: messages.STATUS_CODE_FOR_INVALID_INPUT,
+                        message: "Appointment date is required and can not be in the past!",
+                    };
+                    res.status(messages.STATUS_CODE_FOR_INVALID_INPUT).json(output);
                 }
                 if (!detailsTosave.reschedule_timeSlot || !detailsTosave.reschedule_timeSlot.start || new Date(detailsTosave.reschedule_timeSlot.start) < new Date()) {
-                    throw new Error("Start time is required and cannot be in the past.");
+                    const output = {
+                        statusCode: messages.STATUS_CODE_FOR_INVALID_INPUT,
+                        message: "Start time is required and can not be is the past!",
+                    };
+                    res.status(messages.STATUS_CODE_FOR_INVALID_INPUT).json(output);
                 }
                 if (!detailsTosave.reschedule_timeSlot || !detailsTosave.reschedule_timeSlot.end || new Date(detailsTosave.reschedule_timeSlot.end) < new Date()) {
-                    throw new Error("End time is required and cannot be in the past.");
+                    const output = {
+                    statusCode: messages.STATUS_CODE_FOR_INVALID_INPUT,
+                    message: "End time is required and can not be is the past!",
+                };
+                res.status(messages.STATUS_CODE_FOR_INVALID_INPUT).json(output);
+                }
+            }
+            if(detailsTosave.status == 'rejected'){
+                if(!reject_reason || reject_reason == ''){
+                    const output = {
+                        statusCode: messages.STATUS_CODE_FOR_INVALID_INPUT,
+                        message: "Reason for reject is required!",
+                    };
+                    res.status(messages.STATUS_CODE_FOR_INVALID_INPUT).json(output);
                 }
             }
             let updated = await appointmentModel.findByIdAndUpdate(_id, detailsTosave);
-        }else{
-            let newAppointment = new appointmentModel(detailsTosave);
-            let saved = await newAppointment.save();
-        }
         const output = {
             statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
             message: messages.DATA_SAVED,
@@ -64,6 +103,33 @@ exports.GetAppointment = async (req, res)=> {
             };
             res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
         }
+    } catch (error) {
+        res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+            status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+            message: messages.CATCH_BLOCK_ERROR,
+            errorMessage: error.message
+        });   
+    }
+}
+exports.AppointmentDetails = async (req, res)=> {
+    try {
+        const appointment_id = req.query._id;
+        let appointment = await appointmentModel.findById(appointment_id);
+        if(!appointment){
+            const output = {
+                statusCode: messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+                message: messages.DATA_NOT_FOUND,
+                data:{}
+            };
+            res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
+        }
+        const output = {
+            statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
+            message: messages.DATA_FOUND,
+            data:appointment
+        };
+        res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
+
     } catch (error) {
         res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
             status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
