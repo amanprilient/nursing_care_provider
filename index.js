@@ -25,6 +25,7 @@ app.use((err, req, res, next)=> {
 
 // for uploads
 app.use('/upload', express.static(__dirname + '/upload'));
+app.use('/invoices', express.static(__dirname + '/invoices'));
 
 // for database
 mongoose.connect(process.env.MONGODB_URL).then(res=> {

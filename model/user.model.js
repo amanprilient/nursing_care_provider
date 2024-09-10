@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
     },
     otp: { type: String },
     profile_status: { type: String, enum: ['approved', 'rejected', 'inprocess'] },
+    reject_reason: { type: String },
     user_type: { type: String, enum: ['individual', 'agency', 'customer', 'admin'] },
     email: {
         type: String,
@@ -41,7 +42,7 @@ const userSchema = new mongoose.Schema({
             start: Date,
             end: Date,
         },
-        execptions: [Date]
+        exceptions: [Date]
     },
     preferred_locality: [String],
     pricing: [{ serviceId: mongoose.Schema.Types.ObjectId, price: Number }],

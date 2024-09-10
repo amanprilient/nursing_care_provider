@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const paymentTransactionSchema = new mongoose.Schema({
+const orderSchema = new mongoose.Schema({
     appointment_id:{
         type:mongoose.Schema.Types.ObjectId,
         ref:'appointment',
@@ -23,8 +23,12 @@ const paymentTransactionSchema = new mongoose.Schema({
     },
     transaction_id:{
         type:String,
-        required:[true, 'Transaction Id is required.'],
-        unique:true
+        // required:[true, 'Transaction Id is required.'],
+        // unique:true
+    },
+    order_id:{
+        type:String,
+        required:true
     },
     amount:{
         type:Number,
@@ -32,17 +36,20 @@ const paymentTransactionSchema = new mongoose.Schema({
     },
     status:{
         type:String,
-        enum:["pending", "success", "failed", "cancelled"],
-        required:[true, "Status is required"]
+        // enum:["pending", "success", "failed", "cancelled"],
+        // required:[true, "Status is required"],
     },
     payment_method:{
         Type:String,
-        enum:['UPI', "credit_card", "debit_card", "net_banking"],
-        required:[true, "Payment method is required."]
+        enum:['UPI', "credit_card", "debit_card", "net_banking"]
     },
     transaction_date:{
         type:Date,
-        required:[true, "Transaction Date is required."]
+        // required:[true, "Transaction Date is required."],
+        default: new Date()
+    },
+    invoice_url:{
+        type:String
     },
     gateway_response:{
         type:mongoose.Schema.Types.Mixed,
@@ -51,5 +58,5 @@ const paymentTransactionSchema = new mongoose.Schema({
 
 });
 
-var paymentTransactionModel = mongoose.model("paymenttransaction",paymentTransactionSchema );
-module.exports = { paymentTransactionModel }
+var orderModel = mongoose.model("order",orderSchema );
+module.exports = { orderModel }

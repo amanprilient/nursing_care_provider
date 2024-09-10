@@ -7,5 +7,8 @@ exports.UPLOADABLE_FILE_NAMES = [
     },
     {
         name:"documents", maxCount:10
+    },
+    {
+        name:"service_image", maxCount:1
     }
 ]

@@ -15,6 +15,9 @@ const storage = multer.diskStorage({
         if (file.fieldname == "profile_photo") {
             return cb(null, `profile_photo_${await uuidv4()}${path.extname(file.originalname)}`)
         }
+        if (file.fieldname == "service_image") {
+            return cb(null, `service_image_${await uuidv4()}${path.extname(file.originalname)}`)
+        }
     }
 });
 

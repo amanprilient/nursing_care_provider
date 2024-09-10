@@ -13,14 +13,13 @@ exports.Register = async (req, res) => {
     try {
         const body = req.body;
         const user = res.locals.user
-        // console.log(req.body.email, "@@@", user.user_type);
         const { email, services, city, preferred_working_hours, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, address, preferred_locality } = req.body;
 
         // const existUser = await userModel.findById(user._id,{registered:1});
 
         const validationResult = await validateFields(body, user.user_type);
 
-        if (validationResult.length > 0 && (user.user_type == 'individual' || user.user_type == 'agency')) {
+        if (validationResult.length > 0 && (user.user_type == 'individual' || user.user_type == 'agency' || user.user_type == 'customer')) {
             const output = {
                 status: messages.STATUS_CODE_FOR_BAD_REQUEST,
                 message: messages.DATA_NOT_FOUND,
@@ -58,6 +57,7 @@ exports.Register = async (req, res) => {
         }
 
     } catch (error) {
+        console.log(error,"900909")
         let errors = [];
         error.message.split(",").map(val => {
             errors.push(val);
@@ -155,7 +155,7 @@ exports.DeleteProfile = async (req, res) => {
         });
     }
 };
-exports.updateProfile = async (req, res) => {
+exports.UpdateProfile = async (req, res) => {
     try {
         let profile_photo
         if (req.files && req.files.profile_photo) {
@@ -194,10 +194,10 @@ const validateFields = async (body, user_type) => {
     let requiredFields = [];
     if (user_type == 'individual' || user_type == 'agency') {
         requiredFields = [
-            'services', 'preferred_working_hours', 'pricing', 'name',
+            'services', 'preferred_working_hours', 'pricing', 'name','dob',
             'specialties', 'qualifications', 'experience_years', 'payment_details', 'preferred_locality', 'email'
         ];
-    } else {
+    } else if (user_type == 'customer') {
         requiredFields = [
             'name', "address", 'city', 'email',
         ];
@@ -209,8 +209,8 @@ const validateFields = async (body, user_type) => {
             errors.push(`"${field}" is required and cannot be blank.`);
         }
         if (field == "preferred_working_hours" && (user_type == 'individual' || user_type == 'agency')) {
-            const { days, hours } = JSON.parse(body[field]);
-            if (days.length === 0) {
+            const { days, hours } = body[field] ? JSON.parse(body[field]) : '';
+            if (days && days.length === 0) {
                 errors.push('Preferred working date is required.');
             }
             if (!hours || typeof hours !== 'object' || !hours.start || !hours.end) {
@@ -223,14 +223,6 @@ const validateFields = async (body, user_type) => {
         }
     }
     return errors
-};
-const deleteFile = (filePath) => {
-    return new Promise((resolve, reject) => {
-        fs.unlink(filePath, (err) => {
-            if (err) return reject(err);
-            resolve();
-        });
-    });
 };
 const deleteDocs = async (selected, id, docs, doc_type) => {
     const validDocumentsToDelete = selected === 'all' ? docs : docs.filter(doc => selected.some(deleteDoc=> deleteDoc.url == doc.url));

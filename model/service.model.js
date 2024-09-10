@@ -10,11 +10,9 @@ const serviceSchema = new mongoose.Schema({
     service_image: {
         url: {
             type: String,
-            required:[true, 'service image is required']
         },
         type: {
             type: String,
-            required:[true, 'service image is required']
         },
     }
 }, { timestamps: true });

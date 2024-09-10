@@ -17,15 +17,16 @@ exports.SendOtp = async (req, res)=> {
             };
             return res.status(messages.STATUS_CODE_FOR_INVALID_INPUT).json(output);
         }
+        if (user_type == 'admin' || user_type == 'agency' || user_type == 'individual' || user_type == 'customer') {
 
-        const otp = await createOtpForMobileNo();
-
-        // Update or Create User with OTP
-        const user = await userModel.findOneAndUpdate(
-          { mobile_number, user_type },
-        //   { otp, user_type },
-          { otp },
-          { new: true, upsert: true }
+            const otp = await createOtpForMobileNo();
+            
+            // Update or Create User with OTP
+            const user = await userModel.findOneAndUpdate(
+                { mobile_number, user_type },
+                //   { otp, user_type },
+                { otp },
+          { new: true, upsert: true, runValidators:true, context:"query" }
         );
         const output = {
             statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
@@ -34,17 +35,23 @@ exports.SendOtp = async (req, res)=> {
         };
         // Send OTP via SMS or Email
         // sendOtp(mobile_number, otp);
-    
+        
         res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
+    }else{
+        const output = {
+                status: messages.STATUS_CODE_FOR_INVALID_INPUT,
+                message: "Invalid usertype"
+            };
+            return res.status(messages.STATUS_CODE_FOR_INVALID_INPUT).json(output);
+    }
     } catch (error) {
         res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
             status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
             message: messages.CATCH_BLOCK_ERROR,
-            errorMessage: error.code == 11000 ? 'Account already exist with another role!' : error.message
+            errorMessage: error.code == 11000 ? 'Account already exist with another role. Want to change it? Contact to admin.' : error.message
         });
     }
-}
-
+};
 exports.Login = async (req, res) => {
     const { mobile_number, otp } = req.body;
     if (!validation.otpValidation(otp)) {
@@ -105,4 +112,23 @@ exports.Login = async (req, res) => {
         res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR)
             .json(output);
     }
-  };
+};
+exports.saveFCM = async (req,res)=> {
+    try {
+        let {fcm_token, user_id} = req.body;
+        let updated = await userModel.findByIdAndUpdate(user_id, {fcm_token:fcm_token});
+        if (updated) {
+           return res.status(messages.STATUS_CODE_FOR_DATA_UPDATE).json({
+                message: messages.DATA_UPDATED,
+                data: saved
+            })
+        }
+        else {
+           return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json({
+                message: messages.DATA_NOT_FOUND
+            })
+        }
+    } catch (error) {
+       return res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({ error: error });
+    }
+};
