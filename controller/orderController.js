@@ -5,11 +5,13 @@ const { orderModel } = require('../model/order.model');
 const { userModel } = require('../model/user.model');
 const { serviceModel } = require('../model/service.model');
 const { default: mongoose } = require('mongoose');
+const messages  = require("../shared/messages") 
+const logger = require('../shared/logger');
 
-// const razorpay = new Razorpay({
-//     key_id: process.env.RAZOR_KEY_ID,
-//     key_secret: process.env.RAZOR_SECRET_KEY
-// });
+const razorpay = new Razorpay({
+    key_id: process.env.RAZOR_KEY_ID,
+    key_secret: process.env.RAZOR_SECRET_KEY
+});
 
 exports.generateOrder = async (req, res) => {
 
@@ -21,6 +23,7 @@ exports.generateOrder = async (req, res) => {
             currency: 'INR',
             receipt: 'purchase nursing service.'
         });
+        console.log(order,"order");
 
         const newOrder = new orderModel({
             appointment_id,
@@ -122,7 +125,7 @@ exports.verifyPayment = async (req, res) => {
     const body = razorpay_order_id + "|" + razorpay_payment_id;
 
     const expectedSignature = crypto
-        .createHmac("sha256", process.env.SECRET_KEY)
+        .createHmac("sha256", process.env.RAZOR_SECRET_KEY)
         .update(body.toString())
         .digest("hex");
 
@@ -136,7 +139,6 @@ exports.verifyPayment = async (req, res) => {
             const invoicePath = await generateInvoice(order);
 
             await orderModel.updateOne({ order_id: razorpay_order_id }, { status: 'paid', invoice_url: invoicePath});
-
 
             res.status(200).json({ success: true });
         } catch (error) {
