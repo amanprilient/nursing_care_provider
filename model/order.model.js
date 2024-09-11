@@ -41,7 +41,7 @@ const orderSchema = new mongoose.Schema({
     },
     payment_method:{
         Type:String,
-        enum:['UPI', "credit_card", "debit_card", "net_banking"]
+        enum:["UPI", "credit_card", "debit_card", "net_banking", "cash"]
     },
     transaction_date:{
         type:Date,

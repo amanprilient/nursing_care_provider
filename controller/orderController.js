@@ -79,10 +79,10 @@ const generateInvoicePDF = async (order) => {
     //     }
     // }
     const service_details = await userModel.findOne({
-        _id: req.body.user_id,
-        pricing: { $elemMatch: { serviceId: req.body.service_id } }
+        _id: order.service_provider_id,
+        pricing: { $elemMatch: { serviceId: order.service_id } }
       }, {
-        pricing: { $elemMatch: { serviceId: req.body.service_id } }
+        pricing: { $elemMatch: { serviceId: order.service_id } }
       }).populate({
         path: 'pricing.serviceId', // Populating the serviceId field
         model:serviceModel

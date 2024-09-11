@@ -7,6 +7,7 @@ const messages = require('../shared/messages');
 const util = require("../shared/util");
 const logger = require("../shared/logger");
 const { serviceModel } = require("../model/service.model");
+const { findUserByService } = require("../service/userservice");
 
 exports.AddService = async (req, res) => {
     try {
@@ -92,7 +93,7 @@ exports.DeleteService = async (req, res) => {
                 message: "Service id se required!",
                 data: {}
             };
-            res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
+           return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
         }
         if(res.locals.user.user_type != 'admin'){
             return res.status(messages.STATUS_CODE_FOR_UNAUTHORIZED).json({

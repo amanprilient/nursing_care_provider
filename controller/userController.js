@@ -1,14 +1,84 @@
+
 const express = require("express");
 const fs = require('fs');
 const path = require('path');
+const { url } = require("inspector");
+const { serviceModel } = require("../model/service.model");
 const { userModel } = require("../model/user.model");
+const { findUserByService } = require("../service/userservice");
+const messages = require("../shared/messages");
 const validation = require("../shared/validation");
-const messages = require('../shared/messages');
 const { createOtpForMobileNo } = require("../shared/util");
 const util = require("../shared/util");
 const logger = require("../shared/logger");
-const { url } = require("inspector");
 
+
+exports.getServiceProvider = async (req,res)=> {
+    try {
+        let service_id = req.query.service_id;
+        if(!service_id){
+            const output = {
+            statusCode: messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+            message: "Service id se required!",
+            data: {}
+        };
+        return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
+        }
+        let providers = await findUserByService(service_id);
+        if(providers.success){
+            const output = {
+                statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
+                message: providers.message,
+                data: providers.data
+            };
+            return res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
+        }else{
+            const output = {
+                statusCode: messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+                message: providers.message,
+                data: providers.data
+            };
+            return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
+        }
+    } catch (error) { 
+        return res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+        status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+        message: messages.CATCH_BLOCK_ERROR,
+        errorMessage: error.message
+    });
+    }
+}
+exports.getUserProfile = async (req,res)=> {
+    try {
+        let user_id = res.locals.user._id;
+        let user = await userModel.findOne({_id:user_id, is_enable:true}).populate({
+            path: 'pricing.serviceId', // Populating the serviceId field
+            model:serviceModel
+          });
+          if(!user){
+            const output = {
+            statusCode: messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+            message: "User not found or has been disabled!",
+            data: {}
+        };
+        return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
+          } else{
+            const output = {
+                statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
+                message: "User found.",
+                data: user
+            };
+            return res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
+          }
+    } catch (error) { 
+        console.log(error,"---")
+        return res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+        status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+        message: messages.CATCH_BLOCK_ERROR,
+        errorMessage: error.message
+    });
+    }
+}
 exports.Register = async (req, res) => {
     try {
         const body = req.body;
@@ -209,9 +279,12 @@ const validateFields = async (body, user_type) => {
             errors.push(`"${field}" is required and cannot be blank.`);
         }
         if (field == "preferred_working_hours" && (user_type == 'individual' || user_type == 'agency')) {
-            const { days, hours } = body[field] ? JSON.parse(body[field]) : '';
+            const { days, hours, exceptions } = body[field] ? JSON.parse(body[field]) : '';
             if (days && days.length === 0) {
                 errors.push('Preferred working date is required.');
+            }
+            if (exceptions && exceptions.length > 0 && exceptions.some(date => new Date(date) < new Date())) {
+                errors.push('Exceptions Date can not be in the past.');
             }
             if (!hours || typeof hours !== 'object' || !hours.start || !hours.end) {
                 errors.push('Hours should include both start and end times.');
@@ -219,6 +292,20 @@ const validateFields = async (body, user_type) => {
                 if (isNaN(new Date(hours.start)) || isNaN(new Date(hours.end))) {
                     errors.push('Start and end of preferred hours should be valid dates.');
                 }
+            }
+        }
+        if (field == "payment_details" && (user_type == 'individual' || user_type == 'agency')) {
+            if (!body[field].paymentNumber || body[field].paymentNumber.toString().length != 10) {
+                errors.push('Payment number must be a valid number and at least 10 digits long.');
+            }
+            if (!/^\d{9,18}$/.test(body[field].bank_account_number)) {
+                errors.push('Bank account number must be between 9 and 18 digits long.');
+            }
+            if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(body[field].IFSC_code)) {
+                errors.push('Invalid IFSC code format.');
+            }
+            if (typeof body[field].branch_name !== 'string' || body[field].branch_name.trim() === '') {
+                errors.push('Branch name is required.');
             }
         }
     }

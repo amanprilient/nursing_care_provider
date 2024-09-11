@@ -73,6 +73,13 @@ exports.Login = async (req, res) => {
         };
         return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
       }
+      if(user && user.is_enable == false){
+        const output = {
+            status: messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+            message: "Account disabled! Please contact to admin."
+        };
+        return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
+      }
   
       // Verify OTP
       if (user.otp !== otp) {
