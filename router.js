@@ -15,12 +15,14 @@ router.post('/auth/login',authController.Login );
 router.put('/auth/save-fcm',authController.saveFCM );
 
 // services
-router.post('/service/add',checkAuth, uploadImage, servicesController.AddService );
-router.delete('/service/delete',checkAuth, servicesController.DeleteService );
+router.post('/service/add', checkAuth, uploadImage, servicesController.AddService );
+router.delete('/service/delete', checkAuth, servicesController.DeleteService );
+router.get('/service/get', checkAuth, servicesController.getAllServices );
+router.get('/service/details', checkAuth, servicesController.serviceDetails );
 
 // user
-router.get('/user/get-providers',checkAuth, userController.getServiceProvider );
-router.get('/user/get-profile',checkAuth, userController.getUserProfile );
+router.get('/user/get-providers', checkAuth, userController.getServiceProvider );
+router.get('/user/get-profile', checkAuth, userController.getUserProfile );
 router.put('/user/register', checkAuth, uploadImage, userController.Register );
 router.post('/user/delete-docs', checkAuth, userController.DeleteDocuments );
 router.put('/user/delete-profile', checkAuth, userController.DeleteProfile );

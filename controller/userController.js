@@ -295,16 +295,16 @@ const validateFields = async (body, user_type) => {
             }
         }
         if (field == "payment_details" && (user_type == 'individual' || user_type == 'agency')) {
-            if (!body[field].paymentNumber || body[field].paymentNumber.toString().length != 10) {
+            if (!body[field]?.paymentNumber || body[field]?.paymentNumber?.toString().length != 10) {
                 errors.push('Payment number must be a valid number and at least 10 digits long.');
             }
-            if (!/^\d{9,18}$/.test(body[field].bank_account_number)) {
+            if (!/^\d{9,18}$/.test(body[field]?.bank_account_number)) {
                 errors.push('Bank account number must be between 9 and 18 digits long.');
             }
-            if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(body[field].IFSC_code)) {
+            if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(body[field]?.IFSC_code)) {
                 errors.push('Invalid IFSC code format.');
             }
-            if (typeof body[field].branch_name !== 'string' || body[field].branch_name.trim() === '') {
+            if (typeof body[field]?.branch_name !== 'string' || body[field]?.branch_name?.trim() === '') {
                 errors.push('Branch name is required.');
             }
         }

@@ -41,7 +41,7 @@ exports.AddService = async (req, res) => {
                     const documentPath = path.join(__dirname, '../', existedService.service_image.url);
                     await util.deleteFile(documentPath);
                 }
-                service = await serviceModel.findOneAndUpdate(
+                service = await serviceModel.findOneAndUpdate(  
                     { _id },
                     { name, description, service_image },
                     { new: true, upsert: true }
@@ -120,14 +120,45 @@ exports.DeleteService = async (req, res) => {
             res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
         }
     } catch (error) {
-        let errors = []
-        error.split(",").map(val => {
-            errors.push(val)
-        })
         res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
             status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
             message: messages.CATCH_BLOCK_ERROR,
-            errorMessage: errors
+            errorMessage: error.message
         });
+    }
+}
+exports.getAllServices = async (req,res)=> {
+    try {
+        let services = await serviceModel.find({});
+        let output = {
+                statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
+                message: "Services found.",
+                data: services
+            }
+        return res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
+    } catch (error) { 
+        res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+        status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+        message: messages.CATCH_BLOCK_ERROR,
+        errorMessage: error.message
+    });
+    }
+}
+exports.serviceDetails = async (req,res)=> {
+    try {
+        let service_id = req.query.service_id
+        let service = await serviceModel.findById({_id:service_id});
+        let output = {  
+                statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
+                message: "Service found.",
+                data: service
+            }
+        return res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
+    } catch (error) { 
+        res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
+        status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
+        message: messages.CATCH_BLOCK_ERROR,
+        errorMessage: error.message
+    });
     }
 }
