@@ -98,7 +98,7 @@ const appointmentSchema = new mongoose.Schema({
             min:1,
             max:5
         },
-        Comment:{
+        comment:{
             type:String
         },
         date:{
