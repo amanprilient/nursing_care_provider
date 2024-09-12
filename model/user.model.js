@@ -89,7 +89,12 @@ const userSchema = new mongoose.Schema({
     fcm_token: {
         type: String
     },
-    ratings:[Number],
+    // ratings:[Number],
+    ratings:[{
+        appointment_id:{type:mongoose.Schema.Types.ObjectId},
+        customer_id:{type:mongoose.Schema.Types.ObjectId},
+        rating:{type:Number}
+    }],
     is_enable: {
         type: Boolean,
         default: true

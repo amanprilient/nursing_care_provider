@@ -216,8 +216,27 @@ exports.AppointmentFeedback = async (req, res) => {
                 comment: comment,
                 date: new Date()
             }
-            let updated = await appointmentModel.findByIdAndUpdate(appointment_id, { feedback: feedback });
-            let updated_user = await userModel.findByIdAndUpdate(appointment.service_provider, { $push: { ratings: rating } });
+            let updatedAppointment = await appointmentModel.findByIdAndUpdate(appointment_id, { feedback: feedback });
+            let updatedUser = await userModel.findOneAndUpdate(
+                { 
+                    _id: updatedAppointment.service_provider,
+                    'ratings.appointment_id': appointment_id,  // Check if the rating for this appointment already exists
+                    'ratings.customer_id': updatedAppointment.customer  // Check if the rating for this appointment already exists
+                },
+                { 
+                    $set: { 'ratings.$.rating': rating }  // Update the existing rating
+                },
+                { new: true }
+            );
+        
+            // If no existing rating was found, push a new one
+            if (!updatedUser) {
+                updatedUser = await userModel.findByIdAndUpdate(
+                    updatedAppointment.service_provider,
+                    { $push: { ratings: {appointment_id:updatedAppointment._id, customer_id:updatedAppointment.customer, rating:rating} } },  // Push new rating if not found
+                    { new: true }
+                );
+            }
             const output = {
                 statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
                 message: messages.DATA_FOUND,
