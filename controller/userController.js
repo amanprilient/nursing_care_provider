@@ -119,7 +119,7 @@ exports.Register = async (req, res) => {
             }
         }
         let fieldsForSave = {
-            email, services, city, preferred_working_hours: preferred_working_hours ? JSON.parse(preferred_working_hours) : {}, pricing, name, dob, gender, specialties, qualifications, experience_years, payment_details, documents, certifications, profile_photo, registered: true, address, preferred_locality
+            email:email.toLowerCase(), services, city, preferred_working_hours: preferred_working_hours ? JSON.parse(preferred_working_hours) : {}, pricing, name:name.toLowerCase(), dob, gender, specialties, qualifications, experience_years, payment_details, documents, certifications, profile_photo, registered: true, address, preferred_locality
         }
         let updated = await userModel.findByIdAndUpdate(user._id, fieldsForSave, { new: true });
         if (updated) {
@@ -284,7 +284,7 @@ const validateFields = async (body, user_type) => {
     let requiredFields = [];
     if (user_type == 'individual' || user_type == 'agency') {
         requiredFields = [
-            'services', 'preferred_working_hours', 'pricing', 'name','dob',
+            'services', 'preferred_working_hours', 'pricing', 'name',//'dob',
             'specialties', 'qualifications', 'experience_years', 'payment_details', 'preferred_locality', 'email'
         ];
     } else if (user_type == 'customer') {
