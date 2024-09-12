@@ -11,8 +11,14 @@ const util = require("../shared/util")
 exports.BookAppointment = async (req, res) => {
     try {
         const { service_provider, service, price, appointment_date, timeSlot, payment_status, notes, reject_reason, location, _id, reschedule_date, reschedule_timeSlot } = req.body;
-        const customer_id = res.locals.user._id;
-
+        const customer_id = res?.locals?.user?._id;
+        const user_type = res?.locals?.user?.user_type;
+        if(!customer_id || user_type != "customer"){
+            return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json({
+                status:messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+                messages:"Not a valid user!"
+            });
+        }
         let detailsTosave = {
             customer: customer_id, service_provider, service, price, appointment_date, timeSlot, payment_status, notes, reject_reason, location, reschedule_date, reschedule_timeSlot
         }
@@ -44,6 +50,12 @@ exports.UpdateAppointment = async (req, res) => {
             return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json({
                 statusCode: messages.STATUS_CODE_FOR_BAD_REQUEST,
                 message: "No data provided to update."
+            });
+        }
+        if(!res.locals.user){
+            return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json({
+            statusCode: messages.STATUS_CODE_FOR_BAD_REQUEST,
+            message: "User not found!"
             });
         }
 
@@ -82,15 +94,20 @@ exports.UpdateAppointment = async (req, res) => {
             notificationMessage = "Your appointment has been Rejected. Please check reason."
         }
         let updated = await appointmentModel.findByIdAndUpdate(_id, { $set: detailsTosave }, { new: true, runValidators: true });
+        if(!updated){
+            return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json({
+                statusCode: messages.STATUS_CODE_FOR_BAD_REQUEST,
+                message: "Appointment not found!"
+            });
+        }
         let userIdFornotification;
         res.locals.user.user_type == 'customer' ? userIdFornotification = updated.service_provider : userIdFornotification = updated.customer;
         let userToSendNotification = await findUserById(userIdFornotification);
         // const title = 'Appointment Updated';
         // const body = notificationMessage;
         // const screenName = 'Appointment';
-        // for (const admin of fcmTokens) {
-        //     await util.sendNotification(admin.fcm_token, title, body, screenName, admin.user_id);
-        // }
+        // await util.sendNotification(userToSendNotification.data.fcm_token, title, body, screenName, userToSendNotification.data._id);
+        
         const output = {
             statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
             message: messages.DATA_SAVED,
@@ -107,6 +124,13 @@ exports.UpdateAppointment = async (req, res) => {
 }
 exports.GetAppointment = async (req, res) => {
     try {
+        let user = res?.locals?.user
+        if(!user){
+            return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json({
+                status:messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+                messages:"User not found!"
+            });
+        }
         let appointments = await findAppointment(res.locals.user._id, res.locals.user.user_type);
         if (appointments.success) {
             const output = {
@@ -134,6 +158,12 @@ exports.GetAppointment = async (req, res) => {
 exports.AppointmentDetails = async (req, res) => {
     try {
         const appointment_id = req.query._id;
+        if(!res.locals.user){
+            return res.status(messages.STATUS_CODE_FOR_BAD_REQUEST).json({
+                statusCode: messages.STATUS_CODE_FOR_BAD_REQUEST,
+                message: "User not found"
+            });
+        }
         let appointment = await appointmentModel.findById(appointment_id).populate([
             { model: userModel, path: 'customer' }, { model: userModel, path: 'service_provider' }, { model: serviceModel, path: 'service' }
         ]);

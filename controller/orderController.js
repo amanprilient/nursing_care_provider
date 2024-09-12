@@ -23,7 +23,6 @@ exports.generateOrder = async (req, res) => {
             currency: 'INR',
             receipt: 'purchase nursing service.'
         });
-        console.log(order,"order");
 
         const newOrder = new orderModel({
             appointment_id,
@@ -33,7 +32,6 @@ exports.generateOrder = async (req, res) => {
             amount,
             order_id: order.id,
         });
-
 
         const saved = await newOrder.save();
 

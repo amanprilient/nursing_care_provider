@@ -12,7 +12,6 @@ const { createOtpForMobileNo } = require("../shared/util");
 const util = require("../shared/util");
 const logger = require("../shared/logger");
 
-
 exports.getServiceProvider = async (req,res)=> {
     try {
         let service_id = req.query.service_id;
@@ -50,7 +49,13 @@ exports.getServiceProvider = async (req,res)=> {
 }
 exports.getUserProfile = async (req,res)=> {
     try {
-        let user_id = res.locals.user._id;
+        let user_id = res?.locals?.user?._id;
+        if(!user_id){
+            return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json({
+                status:messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+                messages:"user not found!"
+            });
+        }
         let user = await userModel.findOne({_id:user_id, is_enable:true}).populate({
             path: 'pricing.serviceId', // Populating the serviceId field
             model:serviceModel
@@ -70,8 +75,7 @@ exports.getUserProfile = async (req,res)=> {
             };
             return res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
           }
-    } catch (error) { 
-        console.log(error,"---")
+    } catch (error) {
         return res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
         status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,
         message: messages.CATCH_BLOCK_ERROR,
@@ -127,7 +131,18 @@ exports.Register = async (req, res) => {
         }
 
     } catch (error) {
-        console.log(error,"900909")
+        if (error.code === 11000) {
+            // Extract the field that caused the duplicate error
+            const duplicateField = Object.keys(error.keyPattern)[0];
+            
+            // Customize the error message for email duplicates
+            if (duplicateField === 'email') {
+                return res.status(400).json({
+                    status: 400,
+                    message: "Email already exists!"
+                });
+            }
+        }
         let errors = [];
         error.message.split(",").map(val => {
             errors.push(val);
@@ -143,8 +158,13 @@ exports.Register = async (req, res) => {
 exports.DeleteDocuments = async (req, res) => {
     try {
         const { documentsToDelete, deleteAll, fileType } = req.body; // List of document paths to delete
-        const user = res.locals.user; //user
-
+        const user = res?.locals?.user; //user
+        if(!user){
+            return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json({
+                status:messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+                messages:"User not found!"
+            });
+        }
         if (user.user_type == 'admin' || user.user_type == 'customer') {
             const output = {
                 status: messages.STATUS_CODE_FOR_BAD_REQUEST,

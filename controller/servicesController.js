@@ -13,7 +13,8 @@ exports.AddService = async (req, res) => {
     try {
         const { name, description, _id } = req.body;
         let service;
-        if(res.locals.user.user_type != 'admin'){
+        
+        if(!res.locals?.user?.user_type && res.locals?.user?.user_type != 'admin'){
             return res.status(messages.STATUS_CODE_FOR_UNAUTHORIZED).json({
                 status:messages.STATUS_CODE_FOR_UNAUTHORIZED,
                 messages:"Unauthorized user!"
@@ -95,14 +96,14 @@ exports.DeleteService = async (req, res) => {
             };
            return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
         }
-        if(res.locals.user.user_type != 'admin'){
+        if(!res.locals?.user?.user_type && res.locals?.user?.user_type != 'admin'){
             return res.status(messages.STATUS_CODE_FOR_UNAUTHORIZED).json({
                 status:messages.STATUS_CODE_FOR_UNAUTHORIZED,
                 messages:"Unauthorized user!"
             });
         }
         let deleted = await serviceModel.findByIdAndDelete(_id);
-        if(deleted.service_image.url){
+        if(deleted?.service_image?.url){
             const documentPath = path.join(__dirname, '../', deleted.service_image.url);
             await util.deleteFile(documentPath);
         }
@@ -148,12 +149,22 @@ exports.serviceDetails = async (req,res)=> {
     try {
         let service_id = req.query.service_id
         let service = await serviceModel.findById({_id:service_id});
-        let output = {  
-                statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
-                message: "Service found.",
-                data: service
-            }
-        return res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
+        if(service){
+
+            let output = {  
+                    statusCode: messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND,
+                    message: "Service found.",
+                    data: service
+                }
+            return res.status(messages.STATUS_CODE_FOR_DATA_SUCCESSFULLY_FOUND).json(output);
+        }else{
+            let output = {  
+                    statusCode: messages.STATUS_CODE_FOR_DATA_NOT_FOUND,
+                    message: "Service not found.",
+                    data: service
+                }
+            return res.status(messages.STATUS_CODE_FOR_DATA_NOT_FOUND).json(output);
+        }
     } catch (error) { 
         res.status(messages.STATUS_CODE_FOR_RUN_TIME_ERROR).json({
         status: messages.STATUS_CODE_FOR_RUN_TIME_ERROR,

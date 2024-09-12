@@ -4,10 +4,10 @@ const { checkAuth } = require('./middleware/userauth');
 const { uploadImage } = require('./middleware/upload');
 const authController = require("./controller/authController");
 const servicesController = require("./controller/servicesController");
-const appointmentController = require("./controller/appointmentController")
-const adminController = require("./controller/adminController")
-const orderController = require("./controller/orderController")
-const userController = require("./controller/userController")
+const appointmentController = require("./controller/appointmentController");
+const adminController = require("./controller/adminController");
+const orderController = require("./controller/orderController");
+const userController = require("./controller/userController");
 
 // auth
 router.post('/auth/send-otp',authController.SendOtp );
@@ -33,6 +33,7 @@ router.put('/admin/update-account-status', checkAuth, adminController.ChangeProf
 router.put('/admin/update-account-type', checkAuth, adminController.ChangeUserType );
 router.get('/admin/get-user-list', checkAuth, adminController.getUserList );
 router.put('/admin/delete-restore-user', checkAuth, adminController.deleteRestoreUser );
+router.get('/admin/get-orders', checkAuth, adminController.getAllOrders );
 
 // appointment
 router.post("/appointment/book", checkAuth, appointmentController.BookAppointment);

@@ -33,7 +33,8 @@ var checkAuth = async (req, res, next) => {
         }
 
         // Find the user by mobile number
-        const user = await userModel.findOne({ "mobile_number": userAuth.mobile_number });
+        // const user = await userModel.findOne({ "mobile_number": userAuth.mobile_number });
+        const user = await userModel.findById(userAuth._id);
         res.locals.user = user;
         next();
 
